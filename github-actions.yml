@@ -1,0 +1,34 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+      - name: Build
+        run: mvn clean package
+      - name: Test
+        run: mvn test
+      - name: Security Scan
+        run: |
+          chmod +x ./security/trivy-scan.sh
+          ./security/trivy-scan.sh
+          chmod +x ./security/dependency-check.sh
+          ./security/dependency-check.sh
+      - name: Deploy
+        uses: easingthemes/ssh-deploy@v3
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          remote-user: ec2-user
+          server-ip: ${{ secrets.INSTANCE_IP }}
+          remote-path: /home/ec2-user
+          local-path: target/boardgame-app.jar
