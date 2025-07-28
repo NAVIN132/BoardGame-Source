@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.8.8-openjdk-17'
-        }
-    }
-
+    agent any
     environment {
         TRIVY_VERSION = "0.51.1"
         DEP_CHECK_VERSION = "9.2.0"
@@ -19,17 +14,15 @@ pipeline {
             }
         }
 
-        stage('Update Maven Dependencies') {
+        stage('Run with Maven Docker') {
             steps {
-                echo "✅ Updating Maven dependencies..."
-                sh 'mvn clean install -U'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                echo "✅ Running Maven clean package..."
-                sh 'mvn clean package'
+                script {
+                    docker.image('maven:3.8.8-openjdk-17').inside {
+                        sh 'mvn -version'
+                        sh 'mvn clean install -U'
+                        sh 'mvn package'
+                    }
+                }
             }
         }
 
