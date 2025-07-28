@@ -1,12 +1,15 @@
 pipeline {
-    agent any
-
+     agent {
+        docker {
+            image 'maven:3.8.8-openjdk-17'
+        }
+    }
     environment {
         TRIVY_VERSION = "0.51.1"
         DEP_CHECK_VERSION = "9.2.0"
        // INSTANCE_IP = credentials('ec2-instance-ip') // replace with your Jenkins credential ID for EC2 IP or define manually
     }
-
+    
     stages {
 
         stage('Checkout Source') {
@@ -15,7 +18,13 @@ pipeline {
                 checkout scm
             }
         }
-
+        stage('Update Maven Dependencies') {
+            steps {
+                // Forces update of all SNAPSHOTs and plugins
+                sh 'mvn clean install -U'
+            }
+        }
+        
         stage('Build') {
             steps {
                 echo "✅ Running Maven clean package..."
