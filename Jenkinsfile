@@ -5,12 +5,11 @@ pipeline {
         IMAGE_NAME = 'my-java-app'
         IMAGE_TAG = 'v1'
         CONTAINER_NAME = 'java-web-app'
-        DOCKER_REGISTRY = '' // optional if pushing to a registry
     }
 
     tools {
-        maven 'Maven_3.8.1'  // Define in Jenkins > Manage Jenkins > Global Tool Configuration
-        jdk 'JDK11'          // Same place, must match the label
+        maven 'Maven3'        // <-- Use the actual name from Global Tool Config
+        jdk 'Java 11'         // <-- Use the actual name from Global Tool Config
     }
 
     stages {
@@ -20,7 +19,7 @@ pipeline {
             }
         }
 
-        stage('Build & Unit Test') {
+        stage('Build & Test') {
             steps {
                 sh 'mvn clean verify'
             }
@@ -61,7 +60,7 @@ pipeline {
             echo '✅ CI/CD pipeline completed successfully!'
         }
         failure {
-            echo '❌ Build failed. Showing last container logs (if any)...'
+            echo '❌ Build failed. Showing logs (if any)...'
             sh "docker logs ${CONTAINER_NAME} || true"
         }
         cleanup {
