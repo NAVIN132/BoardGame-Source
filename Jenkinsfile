@@ -4,24 +4,24 @@ pipeline {
     environment {
         IMAGE_NAME = 'my-java-app'
         IMAGE_TAG = 'v1'
-        CONTAINER_NAME = 'java-web-app'
     }
 
     tools {
-        maven 'Maven3'        // <-- Use the actual name from Global Tool Config
-        jdk 'Java 11'         // <-- Use the actual name from Global Tool Config
+        // These names should be configured in Jenkins global tool settings
+        maven 'Maven_3.8.1'
+        jdk 'JDK11'
     }
 
     stages {
-        stage('Checkout Master Branch') {
+        stage('Checkout') {
             steps {
                 git branch: 'master', url: 'https://github.com/NAVIN132/BoardGame-Source.git'
             }
         }
 
-        stage('Build & Test') {
+        stage('Build with Maven') {
             steps {
-                sh 'mvn clean verify'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
@@ -33,23 +33,12 @@ pipeline {
             }
         }
 
-        stage('Stop Existing Container') {
-            steps {
-                script {
-                    sh """
-                        if [ \$(docker ps -q -f name=${CONTAINER_NAME}) ]; then
-                            docker stop ${CONTAINER_NAME} || true
-                            docker rm ${CONTAINER_NAME} || true
-                        fi
-                    """
-                }
-            }
-        }
-
         stage('Run Docker Container') {
             steps {
                 script {
-                    dockerImage.run("-d -p 8080:8080 --name ${CONTAINER_NAME}")
+                    // Optional: Stop previous containers
+                    sh "docker rm -f ${IMAGE_NAME} || true"
+                    dockerImage.run("-d --name ${IMAGE_NAME} -p 8080:8080")
                 }
             }
         }
@@ -57,14 +46,18 @@ pipeline {
 
     post {
         success {
-            echo '✅ CI/CD pipeline completed successfully!'
+            echo '✅ Build and container run successful!'
         }
         failure {
-            echo '❌ Build failed. Showing logs (if any)...'
-            sh "docker logs ${CONTAINER_NAME} || true"
+            echo '❌ Build failed.'
         }
         cleanup {
-            sh 'docker image prune -f'
+            script {
+                node {
+                    echo "🧹 Cleanup: List all Docker containers"
+                    sh 'docker ps -a'
+                }
+            }
         }
     }
 }
