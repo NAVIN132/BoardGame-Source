@@ -2,46 +2,53 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven3'
+        maven 'Maven3' // Must match the name in Global Tool Configuration
     }
 
     environment {
-        JAR_NAME = "my-web-app.jar"
-        PROJECT_DIR = "target"
-        APP_PORT = "8081"
-        APP_PID_FILE = ".app.pid"
+        JAR_NAME = "my-web-app.jar"       // Change this if your JAR has a different name
+        JAR_PATH = "target/my-web-app.jar"
+        PID_FILE = ".app.pid"
+        LOG_FILE = "app.log"
+        APP_PORT = "8080"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone from Git') {
             steps {
-                git url: 'https://github.com/your-user/my-web-app.git', branch: 'main'
+                git url: 'https://github.com/NAVIN132/BoardGame-Source.git', branch: 'master'
             }
         }
 
-        stage('Build') {
+        stage('Build with Maven') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Stop Previous Instance') {
+        stage('Stop Existing App (if running)') {
             steps {
                 script {
-                    if (fileExists(env.APP_PID_FILE)) {
-                        def pid = readFile(env.APP_PID_FILE).trim()
+                    if (fileExists(env.PID_FILE)) {
+                        def pid = readFile(env.PID_FILE).trim()
+                        echo "Stopping app running with PID: $pid"
                         sh "kill -9 $pid || true"
-                        sh "rm -f ${env.APP_PID_FILE}"
+                        sh "rm -f ${env.PID_FILE}"
+                    } else {
+                        echo "No previous instance found."
                     }
                 }
             }
         }
 
-        stage('Run Application') {
+        stage('Run New App') {
             steps {
                 script {
-                    def jarPath = "${env.PROJECT_DIR}/${env.JAR_NAME}"
-                    sh "nohup java -jar ${jarPath} > app.log 2>&1 & echo \$! > ${env.APP_PID_FILE}"
+                    sh """
+                        nohup java -jar ${env.JAR_PATH} > ${env.LOG_FILE} 2>&1 &
+                        echo \$! > ${env.PID_FILE}
+                    """
+                    echo "✅ App started on port ${env.APP_PORT}, PID written to ${env.PID_FILE}"
                 }
             }
         }
@@ -49,10 +56,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Application started on port ${env.APP_PORT}"
+            echo "🎉 Deployment complete. App should be running at http://<EC2-PUBLIC-IP>:8080"
         }
         failure {
-            echo "❌ Build or deployment failed."
+            echo "❌ CI/CD Pipeline Failed."
         }
     }
 }
