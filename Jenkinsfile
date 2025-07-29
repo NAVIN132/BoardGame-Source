@@ -1,54 +1,56 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven3' // Must match the name in Global Tool Configuration
+    environment {
+        IMAGE_NAME = 'my-java-app'
+        IMAGE_TAG = 'v1'
+        CONTAINER_NAME = 'java-web-app'
+        DOCKER_REGISTRY = '' // optional if pushing to a registry
     }
 
-    environment {
-        JAR_NAME = "my-web-app.jar"       // Change this if your JAR has a different name
-        JAR_PATH = "target/my-web-app.jar"
-        PID_FILE = ".app.pid"
-        LOG_FILE = "app.log"
-        APP_PORT = "8080"
+    tools {
+        maven 'Maven_3.8.1'  // Define in Jenkins > Manage Jenkins > Global Tool Configuration
+        jdk 'JDK11'          // Same place, must match the label
     }
 
     stages {
-        stage('Clone from Git') {
+        stage('Checkout Master Branch') {
             steps {
-                git url: 'https://github.com/NAVIN132/BoardGame-Source.git', branch: 'master'
+                git branch: 'master', url: 'https://github.com/NAVIN132/BoardGame-Source.git'
             }
         }
 
-        stage('Build with Maven') {
+        stage('Build & Unit Test') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn clean verify'
             }
         }
 
-        stage('Stop Existing App (if running)') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    if (fileExists(env.PID_FILE)) {
-                        def pid = readFile(env.PID_FILE).trim()
-                        echo "Stopping app running with PID: $pid"
-                        sh "kill -9 $pid || true"
-                        sh "rm -f ${env.PID_FILE}"
-                    } else {
-                        echo "No previous instance found."
-                    }
+                    dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
                 }
             }
         }
 
-        stage('Run New App') {
+        stage('Stop Existing Container') {
             steps {
                 script {
                     sh """
-                        nohup java -jar ${env.JAR_PATH} > ${env.LOG_FILE} 2>&1 &
-                        echo \$! > ${env.PID_FILE}
+                        if [ \$(docker ps -q -f name=${CONTAINER_NAME}) ]; then
+                            docker stop ${CONTAINER_NAME} || true
+                            docker rm ${CONTAINER_NAME} || true
+                        fi
                     """
-                    echo "✅ App started on port ${env.APP_PORT}, PID written to ${env.PID_FILE}"
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    dockerImage.run("-d -p 8080:8080 --name ${CONTAINER_NAME}")
                 }
             }
         }
@@ -56,10 +58,14 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Deployment complete. App should be running at http://<EC2-PUBLIC-IP>:8080"
+            echo '✅ CI/CD pipeline completed successfully!'
         }
         failure {
-            echo "❌ CI/CD Pipeline Failed."
+            echo '❌ Build failed. Showing last container logs (if any)...'
+            sh "docker logs ${CONTAINER_NAME} || true"
+        }
+        cleanup {
+            sh 'docker image prune -f'
         }
     }
 }
