@@ -1,11 +1,25 @@
-# Use Java 11 base image
-FROM openjdk:11-jdk-slim
+# Start from the official Jenkins LTS image
+FROM jenkins/jenkins:lts
 
-# Set working directory
-WORKDIR /app
+USER root
 
-# Copy the built jar
-COPY target/database_service_project-*.jar app.jar
+# Install Java 11 (OpenJDK)
+RUN apt-get update && \
+    apt-get install -y openjdk-11-jdk curl && \
+    apt-get clean
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Set JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH="$JAVA_HOME/bin:$PATH"
+
+# Install Maven 3.8.1
+RUN curl -fsSL https://downloads.apache.org/maven/maven-3/3.8.1/binaries/apache-maven-3.8.1-bin.tar.gz -o /tmp/maven.tar.gz && \
+    tar -xzvf /tmp/maven.tar.gz -C /opt && \
+    ln -s /opt/apache-maven-3.8.1 /opt/maven
+
+ENV MAVEN_HOME=/opt/maven
+ENV PATH="${MAVEN_HOME}/bin:${PATH}"
+
+# Change back to Jenkins user
+USER jenkins
+
