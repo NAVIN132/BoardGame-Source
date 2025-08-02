@@ -6,7 +6,7 @@ pipeline {
         MAVEN_HOME = "/opt/maven"
         PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
         DEPLOY_DIR = "/opt/app"
-        APP_PORT = "8080"  // change if your app runs on a different port
+        APP_PORT = "8081"  // change if your app runs on a different port
     }
 
     tools {
