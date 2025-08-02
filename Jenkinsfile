@@ -11,7 +11,7 @@ pipeline {
 
     tools {
         maven 'Maven'   // Set in Jenkins Global Tool Config
-        jdk 'JAVA_HOME'         // Set in Jenkins Global Tool Config
+        jdk 'Java_Home'         // Set in Jenkins Global Tool Config
     }
 
     stages {
