@@ -55,20 +55,25 @@ pipeline {
             steps {
                 echo "Starting app on port $APP_PORT"
 
-                sh """
-                    # Kill previous instance if running
+               sh """
+                    echo "🔍 Checking if previous app instance is running..."
                     PID=\$(ps -ef | grep 'app.jar' | grep -v grep | awk '{print \$2}')
                     if [ ! -z "\$PID" ]; then
-                        echo "Killing old app process \$PID"
+                        echo "🛑 Killing old app process \$PID"
                         kill -9 \$PID
                     fi
 
-                    # Start new instance
+                    echo "🔁 Starting new instance..."
                     nohup java -jar $DEPLOY_DIR/app.jar --server.port=$APP_PORT > $DEPLOY_DIR/app.log 2>&1 &
                     sleep 5
+
+                    echo "📝 Last 20 lines of app.log:"
+                    tail -n 20 $DEPLOY_DIR/app.log
+
+                    echo "✅ Application should be running at: http://<EC2_PUBLIC_DNS>:$APP_PORT"
                 """
 
-                echo "✅ Application deployed and running at: http://<EC2_PUBLIC_DNS>:$APP_PORT"
+               
             }
         }
     }
