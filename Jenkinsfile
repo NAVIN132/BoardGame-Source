@@ -55,7 +55,7 @@ pipeline {
             steps {
                 echo "Starting app on port $APP_PORT"
 
-                  sh """
+                                 sh """
                     echo "🔍 Checking if previous app instance is running..."
                     PID=\$(ps -ef | grep 'app.jar' | grep -v grep | awk '{print \$2}')
                     if [ ! -z "\$PID" ]; then
@@ -72,7 +72,10 @@ pipeline {
                 
                     echo "🚀 Running app from /opt/app on port 8085..."
                     cd /opt/app
-                    nohup java -jar app.jar --server.port=8085 > app.log 2>&1 &
+                
+                    # Use setsid to fully detach process from Jenkins shell
+                    setsid nohup java -jar app.jar --server.port=8085 > app.log 2>&1 < /dev/null &
+                
                     sleep 5
                 
                     echo "📝 Last 20 lines of app.log:"
@@ -80,6 +83,7 @@ pipeline {
                 
                     echo "✅ Application should be running at: http://<EC2_PUBLIC_DNS>:8085"
                 """
+
 
 
                
