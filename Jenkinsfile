@@ -45,48 +45,54 @@ pipeline {
                 echo "Deploying JAR to $DEPLOY_DIR"
 
                 sh """
-                    sudo mkdir -p $DEPLOY_DIR
-                    sudo cp target/*.jar $DEPLOY_DIR/app.jar
-                """
+                    echo "📁 Creating /opt/app..."
+                    sudo mkdir -p /opt/app
+
+                    echo "📦 Copying JAR to /opt/app..."
+                    sudo cp target/*.jar /opt/app/app.jar
+                    sudo chown -R jenkins:jenkins /opt/app
+
+                    echo "📝 Writing app.service..."
+                    sudo bash -c 'cat > /etc/systemd/system/app.service <<EOF
+                    [Unit]
+                    Description=Spring Boot Application
+                    After=network.target
+                    
+                    [Service]
+                    User=jenkins
+                    WorkingDirectory=/opt/app
+                    ExecStart=/usr/bin/java -jar /opt/app/app.jar --server.port=8085
+                    SuccessExitStatus=143
+                    Restart=always
+                    RestartSec=5
+                    StandardOutput=append:/opt/app/app.log
+                    StandardError=append:/opt/app/app-error.log
+                    
+                    [Install]
+                    WantedBy=multi-user.target
+                    EOF'
+                    """
             }
         }
 
         stage('Run App') {
             steps {
                 echo "Starting app on port $APP_PORT"
+                sh """
+                    echo "🔄 Reloading systemd daemon..."
+                    sudo systemctl daemon-reload
 
-                                 sh """
-                    echo "🔍 Checking if previous app instance is running..."
-                    PID=\$(ps -ef | grep 'app.jar' | grep -v grep | awk '{print \$2}')
-                    if [ ! -z "\$PID" ]; then
-                        echo "🛑 Killing old app process \$PID"
-                        kill -9 \$PID
-                    fi
-                
-                    echo "🧰 Ensuring permissions on /opt/app..."
-                    sudo mkdir -p /opt/app
-                    sudo chown -R jenkins:jenkins /opt/app
-                
-                    echo "📦 Copying new jar to /opt/app..."
-                    cp target/*.jar /opt/app/app.jar
-                
-                    echo "🚀 Running app from /opt/app on port 8085..."
-                    cd /opt/app
-                
-                    # Use setsid to fully detach process from Jenkins shell
-                    setsid nohup java -jar app.jar --server.port=8085 > app.log 2>&1 < /dev/null &
-                
+                    echo "✅ Enabling and restarting app.service..."
+                    sudo systemctl enable app.service
+                    sudo systemctl restart app.service
+
+                    echo "🕵️ Checking logs..."
                     sleep 5
-                
-                    echo "📝 Last 20 lines of app.log:"
-                    tail -n 20 app.log
-                
-                    echo "✅ Application should be running at: http://<EC2_PUBLIC_DNS>:8085"
+                    sudo tail -n 20 /opt/app/app.log
+
+                    echo "🌐 App should be live at: http://<EC2_PUBLIC_DNS>:8085"
                 """
-
-
-
-               
+                
             }
         }
     }
