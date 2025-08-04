@@ -28,27 +28,32 @@ pipeline {
             }
         }
 
-         stage('OWASP Dependency Check') {
-            steps {
-                echo "🔐 Running OWASP Dependency Check..."
-                sh '''
-                    if [ ! -f ./dependency-check/bin/dependency-check.sh ]; then
-                        echo "📦 Downloading OWASP Dependency Check..."
-                        wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.2.0/dependency-check-9.2.0-release.zip -O dc.zip
-                        unzip dc.zip -d ./dependency-check
-                        chmod +x ./dependency-check/bin/dependency-check.sh
-                    fi
+        stage('OWASP Dependency Check') {
+    steps {
+        echo "🔐 Running OWASP Dependency Check..."
+        sh '''
+            echo "📦 Installing unzip if not present..."
+            sudo apt-get update
+            sudo apt-get install -y unzip wget
 
-                    echo "🔍 Running the analysis..."
-                    ./dependency-check/bin/dependency-check.sh --project "BoardGame-Source" \
-                        --scan . \
-                        --format "HTML" \
-                        --out dependency-check-report
+            if [ ! -f ./dependency-check/bin/dependency-check.sh ]; then
+                echo "📥 Downloading OWASP Dependency Check..."
+                wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.2.0/dependency-check-9.2.0-release.zip -O dc.zip
+                unzip dc.zip -d ./dependency-check
+                chmod +x ./dependency-check/bin/dependency-check.sh
+            fi
 
-                    echo "📄 OWASP report generated at dependency-check-report/dependency-check-report.html"
-                '''
-            }
-        }
+            echo "🔍 Running the analysis..."
+            ./dependency-check/bin/dependency-check.sh --project "BoardGame-Source" \
+                --scan . \
+                --format "HTML" \
+                --out dependency-check-report
+
+            echo "📄 OWASP report generated at dependency-check-report/dependency-check-report.html"
+        '''
+    }
+}
+
 
         stage('Package') {
             steps {
