@@ -28,40 +28,6 @@ pipeline {
             }
         }
 
-   stage('OWASP Dependency Check') {
-    steps {
-        echo "🔐 Running OWASP Dependency Check..."
-        sh '''
-            echo "📦 Installing unzip and wget if not present..."
-            sudo apt-get update
-            sudo apt-get install -y unzip wget
-
-            echo "📥 Downloading OWASP Dependency Check..."
-            DC_VERSION=9.2.0
-            DC_FOLDER=dependency-check
-            DC_ZIP=dependency-check-$DC_VERSION-release.zip
-            DC_URL=https://github.com/jeremylong/DependencyCheck/releases/download/v$DC_VERSION/$DC_ZIP
-
-            wget -q $DC_URL -O $DC_ZIP
-
-            echo "📂 Unzipping Dependency Check..."
-            unzip -q $DC_ZIP
-
-            echo "📁 Listing directory to verify structure:"
-            ls -R
-
-            echo "🔍 Running the analysis..."
-            ./$DC_FOLDER/bin/dependency-check.sh --project "BoardGame-Source" \
-                --scan . \
-                --format "HTML" \
-                --out dependency-check-report
-
-            echo "📄 OWASP report generated at dependency-check-report/dependency-check-report.html"
-        '''
-    }
-}
-
-
 
         stage('Package') {
             steps {
@@ -108,26 +74,26 @@ pipeline {
 
                     echo "📝 Writing systemd service..."
                     sudo bash -c 'cat > /etc/systemd/system/app.service <<EOF
-[Unit]
-Description=Spring Boot Application
-After=network.target
-
-[Service]
-User=jenkins
-WorkingDirectory='${DEPLOY_DIR}'
-ExecStart=/usr/bin/java -jar '${DEPLOY_DIR}'/app.jar --server.port='${APP_PORT}'
-SuccessExitStatus=143
-Restart=always
-RestartSec=5
-StandardOutput=append:'${DEPLOY_DIR}'/app.log
-StandardError=append:'${DEPLOY_DIR}'/app-error.log
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-                '''
-            }
-        }
+                [Unit]
+                Description=Spring Boot Application
+                After=network.target
+                
+                [Service]
+                User=jenkins
+                WorkingDirectory='${DEPLOY_DIR}'
+                ExecStart=/usr/bin/java -jar '${DEPLOY_DIR}'/app.jar --server.port='${APP_PORT}'
+                SuccessExitStatus=143
+                Restart=always
+                RestartSec=5
+                StandardOutput=append:'${DEPLOY_DIR}'/app.log
+                StandardError=append:'${DEPLOY_DIR}'/app-error.log
+                
+                [Install]
+                WantedBy=multi-user.target
+                EOF'
+                                '''
+                            }
+                        }
 
         stage('Run App') {
             steps {
