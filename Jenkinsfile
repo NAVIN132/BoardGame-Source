@@ -28,23 +28,30 @@ pipeline {
             }
         }
 
-        stage('OWASP Dependency Check') {
+   stage('OWASP Dependency Check') {
     steps {
         echo "🔐 Running OWASP Dependency Check..."
         sh '''
-            echo "📦 Installing unzip if not present..."
+            echo "📦 Installing unzip and wget if not present..."
             sudo apt-get update
             sudo apt-get install -y unzip wget
 
-            if [ ! -f ./dependency-check/bin/dependency-check.sh ]; then
-                echo "📥 Downloading OWASP Dependency Check..."
-                wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.2.0/dependency-check-9.2.0-release.zip -O dc.zip
-                unzip dc.zip -d ./dependency-check
-                chmod +x ./dependency-check/bin/dependency-check.sh
-            fi
+            echo "📥 Downloading OWASP Dependency Check..."
+            DC_VERSION=9.2.0
+            DC_FOLDER=dependency-check
+            DC_ZIP=dependency-check-$DC_VERSION-release.zip
+            DC_URL=https://github.com/jeremylong/DependencyCheck/releases/download/v$DC_VERSION/$DC_ZIP
+
+            wget -q $DC_URL -O $DC_ZIP
+
+            echo "📂 Unzipping Dependency Check..."
+            unzip -q $DC_ZIP
+
+            echo "📁 Listing directory to verify structure:"
+            ls -R
 
             echo "🔍 Running the analysis..."
-            ./dependency-check/bin/dependency-check.sh --project "BoardGame-Source" \
+            ./$DC_FOLDER/bin/dependency-check.sh --project "BoardGame-Source" \
                 --scan . \
                 --format "HTML" \
                 --out dependency-check-report
@@ -53,6 +60,7 @@ pipeline {
         '''
     }
 }
+
 
 
         stage('Package') {
