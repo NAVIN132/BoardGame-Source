@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    triggers {
+        githubPush()
+    }
+
     environment {
         JAVA_HOME = "/usr/lib/jvm/java-11-openjdk-amd64"
         MAVEN_HOME = "/opt/maven"
