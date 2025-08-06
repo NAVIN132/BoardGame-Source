@@ -1,120 +1,170 @@
-Steps  1 : Run the App Locally
+=
+ BOARD GAME LISTING WEBAPP - SECURE AUTOMATED DEPLOYMENT ON AWS
+=
 
-1. git clone https://github.com/DevOpsInstituteMumbai-wq/Automating-Secure-Deployment-of-Board-game-Listing-WebApp-on-AWS
+📌 PROJECT OVERVIEW
+-------------------
+- Application: Java Spring Boot - Board Game Listing WebApp
+- Infrastructure: AWS (EC2, RDS, ALB) provisioned with Terraform
+- CI/CD Pipeline: Jenkins (triggered via GitHub Webhook)
+- Monitoring: Prometheus and Grafana (Docker)
+
+STEP 1: RUN THE APPLICATION LOCALLY
+------------------------------------------------------------------------------------
+1. Clone the project repository:
+   git clone https://github.com/DevOpsInstituteMumbai-wq/Automating-Secure-Deployment-of-Board-game-Listing-WebApp-on-AWS
    cd BoardGame
 
-2. Run the application in local host and verify that it working 
+2. Build and run the application:
+   mvn clean install
+   mvn spring-boot:run
 
-    mvn clean install
- 
-    mvn spring-boot:run
+3. Verify the application is running:
+   Open browser → http://localhost:8085/
 
-3. Access the Url to verify that application is running in localhost
-
-   http://localhost:8085/
-
-
-After Confirmation I push the source on my Git Hub repository : https://github.com/NAVIN132/BoardGame-Source.git
+4. Push the project to your GitHub:
+   git remote set-url origin https://github.com/NAVIN132/BoardGame-Source.git
+   git push origin main
 
 
-Steps  2 : Create the Infrastructure : 
+STEP 2: CREATE INFRASTRUCTURE USING TERRAFORM
+------------------------------------------------------------------------------------
+1. File Structure:
+   terraform/
+   ├── main.tf
+   ├── variables.tf
+   ├── outputs.tf
+   ├── provider.tf
+   ├── ec2.tf
+   ├── alb.tf
+   ├── rds.tf
 
-1. Write all the .tf file as per project required : 
+2. Initialize Terraform:
+   cd terraform
+   terraform init
 
-├── terraform/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── provider.tf
-│   ├── ec2.tf
-│   ├── alb.tf
-│   ├── rds.tf
+3. Validate configuration:
+   terraform validate
 
-Run the terraform init command which will initate the Provide and download it in our module.
+4. Generate SSH public key from PEM:
+   ssh-keygen -y -f "/path/to/appserverkey.pem" > "/path/to/appserverkey.pub"
 
-Run the terraform validate command which will validate all the configuration
+5. Revalidate and review plan:
+   terraform validate
+   terraform plan
 
-Generate the .pub file using below command : 
-
-ssh-keygen -y -f "/c/KCSWorks/DevOps/CapstoneProject/.ssh/appserverkey.pem" > "/c/KCSWorks/DevOps/CapstoneProject/.ssh/appserverkey.pub"
-
-Again Run the terraform validate command to check every thing is ok.
-
-Run the command terraform plan to check what plan is created and will be applied it will give the details.
-
-Run the below command to apply the : 
-
-terraform apply  ( Approval Require "yes"  throough prompting)
-
-or 
-
-terraform apply -auto-approve  ( Auto Approve ) 
+6. Apply the infrastructure:
+   terraform apply
+   # OR for auto-approval
+   terraform apply -auto-approve
 
 
-2. Access the Jenkin on Url :  http://<EC2_PublicIP>:8080
+STEP 3: JENKINS INSTALLATION & SETUP
+------------------------------------------------------------------------------------
+1. Access Jenkins in browser:
+   http://<EC2_Public_IP>:8080
 
-     Access the EC2 Machine on Git Bash :   ssh -i "C:/KCSWorks/DevOps/CapstoneProject/AWS_Infra/.ssh/appserverkey.pem" ubuntu@<EC2_PublicIP>
-     Get the Admin Initail Password of Jenkins : sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-     Install plug In : Stage View Pipeline  
-   
-3. Set the JAVA and Maven path in Jenkins : 
+2. SSH into EC2:
+   ssh -i "/path/to/appserverkey.pem" ubuntu@<EC2_Public_IP>
 
-      Java   : To see the path : echo $JAVA_HOME
-  
-                Name :  Java_Home 
-                JAVA_HOME : /usr/lib/jvm/java-17-openjdk-amd64
+3. Get initial admin password:
+   sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 
-    Maven : To see Maven path : mvn -version
-                Name : Maven
-                MAVEN_HOME : /usr/share/maven
+4. Install required Jenkins plugins:
+   - Git Plugin
+   - GitHub Plugin
+   - GitHub Integration Plugin
+   - Pipeline Plugin
+   - Stage View Plugin
 
-4.  Set the Global credentials : 
-      secret text
-      github
+5. Configure global tools in Jenkins:
+   Java:
+     Name: Java_Home
+     Path: /usr/lib/jvm/java-17-openjdk-amd64
 
-5. Install the plugin in the Jenkins : 
+   Maven:
+     Name: Maven
+     Path: /usr/share/maven
 
-    Stage view 
-    GitHub plugin
-    GitHub Integration plugin
-    Git plugin
-    Pipeline plugin
+6. Add global credentials in Jenkins:
+   - Kind: Secret Text
+   - ID: github
+   - Value: Your GitHub PAT (Personal Access Token)
 
-6.  Configure GitHub Webhook
-      Go to your GitHub repo:
-    Settings → Webhooks → Add webhook
 
-     Payload URL: http://<ec2-ip>:8080/github-webhook/
-     Content type: application/json
+STEP 4: CONFIGURE GITHUB WEBHOOK
+------------------------------------------------------------------------------------
+1. Go to your GitHub repository → Settings → Webhooks → Add Webhook
 
-     Event: "Just the push event"
+2. Set the following:
+   - Payload URL: http://<EC2_Public_IP>:8080/github-webhook/
+   - Content type: application/json
+   - Event: Just the push event
 
-    Save
+3. Save the webhook
 
-7.  Write the CI/CD pieline Job Configuration
-       
-      If you’re not using a multibranch pipeline:
 
-      Go to your Jenkins job → Configure
+STEP 5: JENKINS PIPELINE CONFIGURATION
+------------------------------------------------------------------------------------
+1. In Jenkins → Create a new Pipeline job (or use an existing one)
 
-      Enable: "GitHub hook trigger for GITScm polling"
+2. Configure GitHub project:
+   - Enable GitHub project
+   - Add repository URL
 
-      After Successful JOB run access the url : http://<ec2-ip>:8085 to verify that application is running or not    
- 
-     optional  
+3. Under Source Code Management → Git:
+   - Add your GitHub repository URL
+   - Select credentials
 
-     Run it manually using  Git Bash : 
+4. Under Build Triggers:
+   - Check: GitHub hook trigger for GITScm polling
 
-     cd /opt/app
-     java -jar app.jar --server.port=8085
-  
+5. Define pipeline using:
+   - A Jenkinsfile in your repo, OR
+   - Inline pipeline script
 
-7 . Output Ports & URLs to Access
+6. Save the configuration
 
-Tool	Default Port	Access URL
+7. Push code to GitHub → Jenkins will auto-trigger the pipeline
 
-Jenkins	   8080	http://<ec2-ip>:8080
-Prometheus   9090	http://<ec2-ip>:9090
-Grafana	   3000	http://<ec2-ip>:3000
-Application   8085       http://<ec2-ip>:8085
-Actuator        8085       http://<ec2-ip>:8085/actuator/
+
+OPTIONAL: MANUAL APP RUN ON EC2
+------------------------------------------------------------------------------------
+1. SSH into the EC2 instance:
+   ssh -i "/path/to/appserverkey.pem" ubuntu@<EC2_Public_IP>
+
+2. Navigate to app directory and run:
+   cd /opt/app
+   java -jar app.jar --server.port=8085
+
+
+STEP 6: ACCESS YOUR TOOLS & APPLICATION
+------------------------------------------------------------------------------------
+| Tool        | Port | URL                                |
+|-------------|------|-------------------------------------|
+| Jenkins     | 8080 | http://<EC2_Public_IP>:8080         |
+| Application | 8085 | http://<EC2_Public_IP>:8085         |
+| Actuator    | 8085 | http://<EC2_Public_IP>:8085/actuator|
+| Prometheus  | 9090 | http://<EC2_Public_IP>:9090         |
+| Grafana     | 3000 | http://<EC2_Public_IP>:3000         |
+
+
+FINAL CHECKLIST ✅
+------------------------------------------------------------------------------------
+- [x] Application runs successfully on localhost
+- [x] AWS infrastructure created with Terraform
+- [x] Jenkins is installed and accessible
+- [x] Java and Maven paths set correctly in Jenkins
+- [x] GitHub webhook set and verified
+- [x] CI/CD pipeline working end-to-end
+- [x] Application deployed on EC2 and accessible
+- [x] Monitoring tools (Prometheus/Grafana) setup
+
+
+AUTHOR
+------------------------------------------------------------------------------------
+Name    : Navin Kumar  
+GitHub  : https://github.com/NAVIN132  
+Project : Automating Secure Deployment of Board Game Listing WebApp on AWS
+
+====================================================================================
